@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Animal Collection</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    form {
+      display: flex;
+      margin-bottom: 20px;
+    }
+
+    form input[type="text"],
+    form input[type="number"],
+    form button {
+      padding: 5px;
+    }
+
+    form input[type="text"] {
+      width: 200px;
+      margin-right: 10px;
+    }
+
+    form input[type="number"] {
+      width: 80px;
+      margin-right: 10px;
+    }
+
+    form button {
+      padding: 5px 10px;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    li span {
+      flex: 1;
+    }
+
+    li button {
+      padding: 3px 8px;
+      margin-left: 10px;
+      background-color: #f44336;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+
+    #updateForm {
+      margin-bottom: 20px;
+    }
+
+    #updateForm input[type="text"],
+    #updateForm input[type="number"],
+    #updateForm button {
+      padding: 5px;
+    }
+
+    #updateForm input[type="text"] {
+      width: 200px;
+      margin-right: 10px;
+    }
+
+    #updateForm input[type="number"] {
+      width: 80px;
+      margin-right: 10px;
+    }
+
+    #updateForm button {
+      padding: 5px 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Animal Collection</h1>
+
+  <form id="animalForm">
+    <input type="text" id="nameInput" placeholder="Name" required>
+    <input type="number" id="ageInput" placeholder="Age" required>
+    <button type="submit" id="submitButton">Create</button>
+  </form>
+
+  <ul id="animalList"></ul>
+
+  <form id="updateForm" style="display: none;">
+    <h2>Update Animal</h2>
+    <input type="hidden" id="animalId">
+    <input type="text" id="updateNameInput" placeholder="Name" required>
+    <input type="number" id="updateAgeInput" placeholder="Age" required>
+    <button type="button" id="updateButton">Update</button>
+    <button type="button" id="cancelButton">Cancel</button>
+  </form>
+
+  <script src="https://unpkg.com/react/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone/babel.min.js"></script>
+
+  <script>
+    // Function to fetch animals from the server
+    function fetchAnimals() {
+      fetch('http://127.0.0.1:3000/animals')
+        .then(response => response.json())
+        .then(animals => {
+          const animalList = document.getElementById('animalList');
+          animalList.innerHTML = '';
+
+          animals.forEach(animal => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <span>${animal.name}</span>
+              <span>${animal.age}</span>
+              <button onclick="editAnimal('${animal._id}', '${animal.name}', ${animal.age})">Edit</button>
+              <button onclick="deleteAnimal('${animal._id}')">Delete</button>
+            `;
+            animalList.appendChild(li);
+          });
+        })
+        .catch(error => {
+          console.error('Error retrieving animals:', error);
+        });
+    }
+
+    // Function to create a new animal
+    function createAnimal(event) {
+      event.preventDefault();
+
+      const nameInput = document.getElementById('nameInput');
+      const ageInput = document.getElementById('ageInput');
+
+      const newAnimal = {
+        name: nameInput.value,
+        age: parseInt(ageInput.value)
+      };
+
+      fetch('http://127.0.0.1:3000/animals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newAnimal)
+      })
+        .then(response => response.json())
+        .then(createdAnimal => {
+          nameInput.value = '';
+          ageInput.value = '';
+
+          fetchAnimals(); // Refresh the animal list
+        })
+        .catch(error => {
+          console.error('Error creating animal:', error);
+        });
+    }
+
+    // Function to delete an animal
+    function deleteAnimal(id) {
+      fetch(`http://127.0.0.1:3000/animals/${id}`, {
+        method: 'DELETE'
+      })
+        .then(() => {
+          const animalList = document.getElementById('animalList');
+          const animalItem = document.getElementById(`animal_${id}`);
+          animalList.removeChild(animalItem);
+        })
+        .catch(error => {
+          console.error('Error deleting animal:', error);
+        });
+    }
+
+    // Function to populate form fields for editing an animal
+    function editAnimal(id, name, age) {
+      const updateForm = document.getElementById('updateForm');
+      const animalIdInput = document.getElementById('animalId');
+      const updateNameInput = document.getElementById('updateNameInput');
+      const updateAgeInput = document.getElementById('updateAgeInput');
+      const updateButton = document.getElementById('updateButton');
+      const cancelButton = document.getElementById('cancelButton');
+
+      animalIdInput.value = id;
+      updateNameInput.value = name;
+      updateAgeInput.value = age;
+
+      updateForm.style.display = 'block';
+
+      updateButton.onclick = () => {
+        updateAnimal(id);
+        updateForm.style.display = 'none';
+      };
+
+      cancelButton.onclick = () => {
+        updateForm.style.display = 'none';
+      };
+    }
+
+    // Function to update an animal
+    function updateAnimal(id) {
+      const animalIdInput = document.getElementById('animalId');
+      const updateNameInput = document.getElementById('updateNameInput');
+      const updateAgeInput = document.getElementById('updateAgeInput');
+
+      const updatedAnimal = {
+        name: updateNameInput.value,
+        age: parseInt(updateAgeInput.value)
+      };
+
+      fetch(`http://127.0.0.1:3000/animals/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedAnimal)
+      })
+        .then(() => {
+          fetchAnimals(); // Refresh the animal list
+        })
+        .catch(error => {
+          console.error('Error updating animal:', error);
+        });
+    }
+
+    // Add event listener to the animal form
+    const animalForm = document.getElementById('animalForm');
+    animalForm.addEventListener('submit', createAnimal);
+
+    // Fetch animals when the page loads
+    fetchAnimals();
+  </script>
+</body>
+</html>
